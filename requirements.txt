@@ -6,3 +6,4 @@ opencv-python
 ultralytics
 pytesseract
 gunicorn
+python-dotenv
