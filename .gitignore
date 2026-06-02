@@ -62,3 +62,19 @@ logs/
 
 # Ignore System Files
 Thumbs.db
+
+# Local environment files
+.env
+.env.local
+
+# Output and runtime files
+outputs/
+
+# Docker / build artifacts
+docker-compose.override.yml
+*.tar
+
+# Model weights (ignore uncommitted large weights)
+assets/*.pt
+assets/*.tflite
+
