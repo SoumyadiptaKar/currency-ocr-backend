@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Currency OCR - Upload</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      #preview { max-width: 700px; border: 1px solid #ddd; }
+      #canvas { max-width: 700px; }
+      .controls { margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <h3>Currency OCR — Upload Image</h3>
+    <div class="controls">
+      <input id="file" type="file" accept="image/*" />
+      <button id="run">Run</button>
+      <span id="status"></span>
+    </div>
+
+    <div>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

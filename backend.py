@@ -25,7 +25,7 @@ pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 os.environ["TESSDATA_PREFIX"] = TESSDATA_PATH
 
 # 📌 Load YOLO Model dynamically
-MODEL_PATH = os.getenv("MODEL_PATH", "assets/trained_model.pt")  # Default model path
+MODEL_PATH = os.getenv("MODEL_PATH", "assets/trained_model_100epochs_on_pretrained_model_50epochs.pt")  # Default model path
 if not os.path.exists(MODEL_PATH):
     MODEL_URL = os.getenv("MODEL_URL")  # Optional: Load model from a URL if needed
     if MODEL_URL:
@@ -42,18 +42,26 @@ os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 def fetch_exchange_rates():
     """Fetch the latest exchange rates from API."""
-    if not API_KEY:
-        print("❌ No API key found! Skipping currency conversion.")
-        return None
+    # Prefer a configured API that may require a key
+    if API_KEY:
+        url = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/USD"
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            return data.get("conversion_rates", {})
+        except Exception as e:
+            print(f"⚠️ Error fetching exchange rates from exchangerate-api: {e}")
 
-    url = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/USD"
+    # Fallback to a free provider that requires no API key
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("conversion_rates", {})
+        resp = requests.get("https://api.exchangerate.host/latest?base=USD", timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        # exchangerate.host returns rates under 'rates'
+        return data.get("rates", {})
     except Exception as e:
-        print(f"⚠️ Error fetching exchange rates: {e}")
+        print(f"⚠️ Error fetching exchange rates from fallback provider: {e}")
         return None
 
 def preprocess_for_ocr(image):
@@ -116,7 +124,7 @@ def process_image():
         return jsonify({"error": "No image provided"}), 400
 
     file = request.files["image"]
-    target_currency = request.form.get("currency", "USD")
+    target_currency = request.form.get("currency", "INR")
 
     # Read and preprocess image
     image = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_COLOR)
@@ -148,10 +156,28 @@ def process_image():
     cv2.imwrite(output_path, cv2.cvtColor(updated_image, cv2.COLOR_RGB2BGR))
     print(f"✅ Processed image saved at {output_path}")
 
+    # Prepare converted prices and boxes for the response to match the overlaid image
+    converted_prices = []
+    boxes = []
+    for (price, (x_min, y_min, x_max, y_max)) in valid_prices:
+        converted = convert_currency(price, target_currency, exchange_rates)
+        converted_prices.append(converted)
+        boxes.append({
+            "price": converted,
+            "bbox": [int(x_min), int(y_min), int(x_max), int(y_max)]
+        })
+
     return jsonify({
         "image_url": f"/processed/{file.filename}",
-        "prices": [price for (price, _) in valid_prices]
+        "prices": converted_prices,
+        "boxes": boxes
     })
+
+
+@app.route("/", methods=["GET"])
+def index():
+    """Serve the simple frontend."""
+    return send_file(os.path.join("static", "index.html"))
 
 @app.route("/processed/<filename>", methods=["GET"])
 def get_processed_image(filename):

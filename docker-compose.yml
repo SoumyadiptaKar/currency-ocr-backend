@@ -1,0 +1,21 @@
+version: "3.8"
+services:
+  backend:
+    build: .
+    env_file: .env
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./assets:/app/assets
+      - ./outputs:/app/outputs
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:stable-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./static:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -1,16 +1,48 @@
-# currency
+# Currency OCR backend
 
-A new Flutter project.
+Minimal Docker quickstart — what the Docker image contains:
 
-## Getting Started
+- Python runtime and required packages from `requirements.txt`.
+- Tesseract OCR and native libraries needed by OpenCV and the model.
+- The app runs with Gunicorn serving the Flask API on port 5000.
 
-This project is a starting point for a Flutter application.
+Before running
 
-A few resources to get you started if this is your first Flutter project:
+- Copy `.env.example` to `.env` and edit values (set `MODEL_PATH` or `API_KEY` if needed):
+	```bash
+	cp .env.example .env
+	# edit .env
+	```
+- Place the YOLO model file in `assets/` or update `MODEL_PATH` in `.env` to point to it.
+- Create outputs folder to persist processed images:
+	```bash
+	mkdir -p outputs
+	```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Run with Docker (single container)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+docker build -t currency-ocr-backend:latest .
+docker run --rm -p 5000:5000 \
+	--env-file .env \
+	-v "$(pwd)/assets:/app/assets" \
+	-v "$(pwd)/outputs:/app/outputs" \
+	currency-ocr-backend:latest
+```
+
+Run with Docker Compose (backend + nginx frontend)
+
+```bash
+docker compose up --build
+```
+
+Access the app
+
+- Frontend (simple upload UI): http://localhost/ (served by nginx in compose) or http://localhost:5000/ when running single container.
+- API: POST `/process_image` with form `image=@file` and optional `currency` field.
+
+Notes
+
+- Do not commit `.env` with secrets. Use an env file or runtime environment variables.
+- Large model files are best mounted as volumes instead of baking into the image.
+
